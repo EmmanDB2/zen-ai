@@ -1,0 +1,99 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Drag and drop</title>
+<style>
+  body { font: 15px/1.4 system-ui, sans-serif; margin: 16px; }
+  .board { display: flex; gap: 12px; align-items: flex-start; }
+  .column { width: 170px; background: #f2f2f5; border-radius: 8px; padding: 8px; }
+  .column h3 { margin: 0 0 6px; font-size: 14px; }
+  .cards { min-height: 60px; display: flex; flex-direction: column; gap: 6px; }
+  .card { background: #fff; border: 1px solid #ccd; border-radius: 6px; padding: 8px; cursor: grab; }
+  .trash { width: 120px; height: 60px; border: 2px dashed #c33; display: flex; align-items: center; justify-content: center; }
+  ol, ul { width: 220px; padding-left: 24px; }
+  li { padding: 6px; margin: 2px 0; background: #eef; border-radius: 4px; }
+  #track { width: 400px; height: 8px; position: relative; background: #ddd; margin: 24px 8px; }
+  #thumb { position: absolute; top: -8px; width: 16px; height: 24px; margin-left: -8px; background: #36c; border-radius: 4px; }
+</style></head>
+<body>
+<!-- 1. HTML5 kanban: cards are draggable="true", columns take the drop -->
+<section class="board">
+  <div class="column"><h3>To do</h3><div class="cards" id="todo">
+    <div class="card" draggable="true" id="c1">Write essay</div>
+    <div class="card" draggable="true" id="c2">Read chapter 4</div>
+  </div></div>
+  <div class="column"><h3>Doing</h3><div class="cards" id="doing">
+    <div class="card" draggable="true" id="c3">Lab report</div>
+  </div></div>
+  <div class="column"><h3>Done</h3><div class="cards" id="done"></div></div>
+  <div class="trash" id="trash" aria-label="Trash" ondragover="event.preventDefault()">Trash</div>
+</section>
+
+<!-- 2. HTML5 sortable list: drop on the top half of an item = before it -->
+<ol id="h5list" aria-label="Reading order">
+  <li draggable="true">Chapter 1</li>
+  <li draggable="true">Chapter 2</li>
+  <li draggable="true">Chapter 3</li>
+</ol>
+
+<!-- 3. A mouse-based sortable list (like jQuery UI): starts after 5 px of movement with the button held -->
+<ul id="mlist" aria-label="Priorities">
+  <li class="ui-sortable-handle">Sleep</li>
+  <li class="ui-sortable-handle">Study</li>
+  <li class="ui-sortable-handle">Gym</li>
+</ul>
+
+<!-- 4. A pointer-based slider -->
+<div id="track"><div id="thumb" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20" tabindex="0"></div></div>
+
+<script>
+  window.log = { drops: 0, trashed: [] };
+  // 1. Kanban
+  document.querySelectorAll(".card").forEach((c) => c.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", c.id); e.dataTransfer.effectAllowed = "move"; }));
+  document.querySelectorAll(".cards").forEach((list) => {
+    list.addEventListener("dragover", (e) => e.preventDefault());
+    list.addEventListener("drop", (e) => { e.preventDefault(); const card = document.getElementById(e.dataTransfer.getData("text/plain")); if (card) { list.append(card); log.drops++; } });
+  });
+  document.getElementById("trash").addEventListener("drop", (e) => { e.preventDefault(); const card = document.getElementById(e.dataTransfer.getData("text/plain")); if (card) { log.trashed.push(card.textContent); card.remove(); } });
+
+  // 2. HTML5 sortable list
+  let dragged = null;
+  const h5 = document.getElementById("h5list");
+  h5.querySelectorAll("li").forEach((li) => {
+    li.addEventListener("dragstart", (e) => { dragged = li; e.dataTransfer.setData("text/plain", li.textContent); });
+    li.addEventListener("dragover", (e) => e.preventDefault());
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (!dragged || dragged === li) return;
+      const r = li.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) li.before(dragged); else li.after(dragged);
+    });
+  });
+
+  // 3. Mouse-based sortable list
+  const ml = document.getElementById("mlist");
+  let pending = null, moving = false;
+  ml.addEventListener("mousedown", (e) => { const li = e.target.closest("li"); if (li && e.button === 0) { pending = { li, y: e.clientY }; moving = false; } });
+  document.addEventListener("mousemove", (e) => {
+    if (!pending) return;
+    if (!(e.buttons & 1)) { pending = null; return; } // the button isn't held: not a drag
+    if (!moving && Math.abs(e.clientY - pending.y) > 5) { moving = true; pending.li.style.opacity = "0.5"; }
+  });
+  document.addEventListener("mouseup", (e) => {
+    if (pending && moving) {
+      const items = [...ml.children].filter((li) => li !== pending.li);
+      const before = items.find((li) => { const r = li.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
+      if (before) before.before(pending.li); else ml.append(pending.li);
+      pending.li.style.opacity = "";
+    }
+    pending = null; moving = false;
+  });
+
+  // 4. Pointer slider
+  const track = document.getElementById("track"), thumb = document.getElementById("thumb");
+  const setValue = (v) => { v = Math.max(0, Math.min(100, Math.round(v))); thumb.style.left = v * 4 + "px"; thumb.setAttribute("aria-valuenow", String(v)); };
+  setValue(20);
+  let sliding = false;
+  thumb.addEventListener("pointerdown", (e) => { sliding = true; try { thumb.setPointerCapture(e.pointerId); } catch (err) {} e.preventDefault(); });
+  document.addEventListener("pointermove", (e) => { if (sliding && (e.buttons & 1)) setValue(((e.clientX - track.getBoundingClientRect().left) / 400) * 100); });
+  document.addEventListener("pointerup", () => { sliding = false; });
+</script>
+</body></html>

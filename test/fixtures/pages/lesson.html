@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lesson 4: Lab safety</title>
+<style>
+  body { font: 15px/1.4 system-ui, sans-serif; margin: 24px; }
+  video { width: 480px; height: 270px; background: #111; display: block; }
+  #bar { width: 480px; height: 6px; background: #ddd; margin: 8px 0; }
+  #fill { height: 6px; width: 0; background: #36c; }
+</style></head>
+<body>
+<h1>Lesson 4: Lab safety</h1>
+<p id="loading">Loading lesson…</p>
+<video id="v"></video>
+<div id="bar"><div id="fill"></div></div>
+<p id="status">Watch the whole video to continue.</p>
+<button id="next" disabled>Next</button>
+
+<script>
+  // A stand-in video (a real one would need a media file): playing, paused and
+  // ended work like the real thing, on a clock the test controls.
+  // lesson.start(seconds, speed): starts playing a video that long, at speed× real time
+  const v = document.getElementById("v");
+  const clip = { duration: NaN, time: 0, playing: false, speed: 1, timer: null };
+  Object.defineProperties(v, {
+    duration: { get: () => clip.duration },
+    currentTime: { get: () => clip.time },
+    paused: { get: () => !clip.playing },
+    ended: { get: () => clip.duration > 0 && clip.time >= clip.duration },
+  });
+  window.log = { nextClicks: 0 };
+  document.getElementById("next").addEventListener("click", () => log.nextClicks++);
+  window.lesson = {
+    start(seconds, speed = 1) {
+      document.getElementById("loading").remove();
+      clip.duration = seconds;
+      clip.speed = speed;
+      clip.playing = true;
+      clip.timer = setInterval(() => {
+        clip.time = Math.min(clip.duration, clip.time + 0.1 * clip.speed);
+        document.getElementById("fill").style.width = (clip.time / clip.duration) * 100 + "%";
+        if (clip.time >= clip.duration) lesson.finish();
+      }, 100);
+    },
+    pause() { clip.playing = false; clearInterval(clip.timer); },
+    finish() {
+      clearInterval(clip.timer);
+      clip.time = clip.duration;
+      clip.playing = false;
+      document.getElementById("status").textContent = "Completed ✓ You can go on to the next lesson.";
+      document.getElementById("next").disabled = false;
+    },
+  };
+  if (location.hash === "#autoplay") setTimeout(() => lesson.start(Number(new URLSearchParams(location.search).get("seconds")) || 30), 1500);
+</script>
+</body></html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Points</title>
+<style>
+  body { margin: 0; font: 15px/1.4 system-ui, sans-serif; }
+  h2 { margin: 16px; font-size: 18px; }
+  #spacer { height: 1400px; }
+</style></head>
+<body>
+<h2>How many peaks does the graph have?</h2>
+
+<!-- 1. An SVG slider with no roles or labels (like many survey and learning sites): ticks 0–5, a dot you drag.
+     Page coordinates: the track runs from x 80 to 480 at y 120; the dot starts at 3 (x 320). -->
+<svg id="slider" width="520" height="80" style="position:absolute;left:40px;top:70px">
+  <text x="10" y="18" font-size="14">Number of peaks</text>
+  <line x1="40" y1="50" x2="440" y2="50" stroke="#999" stroke-width="4"/>
+  <g id="ticks"></g>
+  <text id="val" x="470" y="55" font-size="16">3</text>
+  <circle id="dot" cx="280" cy="50" r="9" fill="#000"/>
+</svg>
+
+<!-- 2. A canvas graph: drag the red point, or click to add a blue one.
+     Page coordinates: x 40–440, y 180–480; the red point starts at canvas (100, 200) = page (140, 380).
+     A green ring (a target for the live test) at canvas (320, 70) = page (360, 250). -->
+<canvas id="graph" width="400" height="300" style="position:absolute;left:40px;top:180px;background:#f6f6f9"></canvas>
+
+<!-- 3. A plain button: a point on it is named like a listed element -->
+<button id="submit" style="position:absolute;left:600px;top:200px;width:160px;height:40px">Submit answer</button>
+
+<!-- 4. A same-site frame with a button inside -->
+<iframe id="fr" style="position:absolute;left:600px;top:300px;width:300px;height:150px;border:0"
+  srcdoc="<body style='margin:0'><button id='b' style='position:absolute;left:20px;top:20px;width:120px;height:30px'>Inside frame</button><script>document.getElementById('b').onclick=()=>{parent.log.frameClicks++}</script></body>"></iframe>
+
+<div id="spacer"></div>
+<script>
+  window.log = { submits: 0, frameClicks: 0, peaks: 3, point: { x: 100, y: 200 }, added: [] };
+  document.getElementById("submit").addEventListener("click", () => log.submits++);
+
+  // 1. Slider: snaps to the nearest tick while the pointer is held
+  const svg = document.getElementById("slider"), dot = document.getElementById("dot"), val = document.getElementById("val");
+  const ticks = document.getElementById("ticks");
+  for (let i = 0; i <= 5; i++) {
+    const x = 40 + i * 80;
+    ticks.insertAdjacentHTML("beforeend", `<line x1="${x}" y1="42" x2="${x}" y2="58" stroke="#999" stroke-width="2"/><text x="${x - 4}" y="76" font-size="12">${i}</text>`);
+  }
+  let sliding = false;
+  dot.addEventListener("pointerdown", (e) => { sliding = true; e.preventDefault(); });
+  document.addEventListener("pointermove", (e) => {
+    if (!sliding || !(e.buttons & 1)) return;
+    const v = Math.max(0, Math.min(5, Math.round((e.clientX - svg.getBoundingClientRect().left - 40) / 80)));
+    dot.setAttribute("cx", String(40 + v * 80));
+    val.textContent = String(v);
+    log.peaks = v;
+  });
+  document.addEventListener("pointerup", () => { sliding = false; });
+
+  // 2. Canvas graph: mouse events only (hit-testing done by the page, like Desmos)
+  const cv = document.getElementById("graph"), ctx = cv.getContext("2d");
+  const draw = () => {
+    ctx.clearRect(0, 0, 400, 300);
+    ctx.strokeStyle = "#2a2"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(320, 70, 16, 0, 7); ctx.stroke();
+    ctx.fillStyle = "#36c"; for (const p of log.added) { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#d33"; ctx.beginPath(); ctx.arc(log.point.x, log.point.y, 8, 0, 7); ctx.fill();
+  };
+  draw();
+  const local = (e) => { const r = cv.getBoundingClientRect(); return { x: Math.round(e.clientX - r.left), y: Math.round(e.clientY - r.top) }; };
+  let grabbed = false, moved = false;
+  cv.addEventListener("mousedown", (e) => { const p = local(e); grabbed = Math.hypot(p.x - log.point.x, p.y - log.point.y) <= 12; moved = false; });
+  document.addEventListener("mousemove", (e) => { if (grabbed && (e.buttons & 1)) { log.point = local(e); moved = true; draw(); } });
+  document.addEventListener("mouseup", () => { grabbed = false; });
+  cv.addEventListener("click", (e) => { if (moved) { moved = false; return; } log.added.push(local(e)); draw(); });
+</script>
+</body></html>

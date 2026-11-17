@@ -1,0 +1,9 @@
+node_modules/
+test/visual/out/
+test/.home/
+.DS_Store
+.zen-src/
+out/
+
+# Local AI notes (kept on this machine, not published)
+CLAUDE.md

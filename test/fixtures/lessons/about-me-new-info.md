@@ -1,0 +1,3 @@
+- Major: Computer Science (Resume facts)
+- Expected graduation: May 2027 (Resume facts)
+- Why computer science: I got hooked fixing my family's computers in high school (Stories)

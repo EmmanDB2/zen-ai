@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Studio Headphones</title></head>
+<body>
+<h1>Studio Headphones</h1>
+<p id="status"></p>
+<button id="add" type="button">Add to cart</button>
+<script>
+  // In stock or not, as the test set it (read again on each reload)
+  const inStock = localStorage.getItem("stock") === "1";
+  document.getElementById("status").textContent = inStock ? "In stock" : "Sold out";
+  document.getElementById("add").disabled = !inStock;
+</script>
+</body></html>

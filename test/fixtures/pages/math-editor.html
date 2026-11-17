@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Compute a differential</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+  .resp_bordered_mathinput { display: inline-block; border: 1px solid #888; border-radius: 4px; padding: 4px; }
+  .mq-editable-field { display: inline-block; min-width: 220px; min-height: 28px; padding: 2px 6px; cursor: text; }
+  .mq-root-block { display: inline-block; min-width: 200px; min-height: 24px; }
+  .mq-textarea { position: absolute; clip: rect(1em 1em 1em 1em); }
+  .mq-textarea textarea { width: 1px; height: 1px; opacity: 0; }
+  #spacer { height: 0; }
+  #banner { position: fixed; left: 0; right: 0; height: 40px; background: #fc0; display: none; }
+  .btn { display: inline-block; width: 240px; height: 60px; }
+</style></head>
+<body>
+<!-- A stand-in for a web math answer box (response markup around a
+     MathQuill-style editor): the editor only reacts to a mousedown on
+     .mq-root-block, and focuses its hidden textarea, like real math editors do. -->
+<div id="spacer"></div>
+<h1>Compute a differential</h1>
+<p>Find dy if y = x<sup>3</sup>.</p>
+<div class="resp_response_input resp_bordered_mathinput">
+  <span class="mq-editable-field mq-math-mode" aria-label="Response input area">
+    <span class="mq-textarea"><textarea id="focusable4" class="resp_focusable" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea></span>
+    <span class="mq-root-block mq-empty"></span>
+  </span>
+</div>
+<p><button class="btn" id="check" type="button">Check answer</button></p>
+<!-- A "box" that never takes focus (no editor behind it) -->
+<p><span class="mq-editable-field mq-math-mode" id="dead" aria-label="Broken answer box"><span class="mq-root-block"></span></span></p>
+<p><label>Notes <input id="notes" value=""></label></p>
+<p><label>Nickname <input id="nick" value=""></label></p>
+<!-- A link-like span that lets its card take the clicks (pointer-events: none) -->
+<div id="card" style="padding: 10px; width: 240px"><span id="ghost" onclick="" style="pointer-events: none; display: inline-block; width: 200px; height: 30px">Open card</span></div>
+<div id="banner">Cookie banner</div>
+<script>
+  window.log = { events: [], checks: 0, bannerClicks: 0 };
+  const root = document.querySelector(".resp_bordered_mathinput .mq-root-block");
+  const ta = document.getElementById("focusable4");
+  const name = (t) => t.id ? `${t.tagName.toLowerCase()}#${t.id}` : `${t.tagName.toLowerCase()}.${String(t.className).split(" ")[0]}`;
+  document.addEventListener("mousedown", (e) => log.events.push("mousedown " + name(e.target)), true);
+  document.addEventListener("focusin", (e) => log.events.push("focusin " + name(e.target)), true);
+  // Only a mousedown on the root block focuses the editor
+  root.addEventListener("mousedown", (e) => { e.preventDefault(); ta.focus(); });
+  // Keys typed into the hidden textarea show up in the box
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace") { root.textContent = root.textContent.slice(0, -1); e.preventDefault(); }
+    else if (e.key.length === 1) { root.textContent += e.key; e.preventDefault(); }
+    root.classList.toggle("mq-empty", !root.textContent);
+  });
+  document.getElementById("check").addEventListener("click", () => log.checks++);
+  document.getElementById("banner").addEventListener("click", () => log.bannerClicks++);
+  log.cardClicks = 0;
+  document.getElementById("card").addEventListener("click", () => log.cardClicks++);
+  // A site that throws away whatever is typed into Nickname
+  document.getElementById("nick").addEventListener("input", (e) => { e.target.value = ""; });
+</script>
+</body></html>

@@ -1,0 +1,233 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root {
+    color-scheme: light dark;
+    --zen-primary-color: #8b6cf3;
+    --zen-border-radius: 11px;
+    --zen-dialog-background: light-dark(#fbfaff, #232129);
+    --zen-toolbar-element-bg: light-dark(rgba(255,255,255,.55), rgba(255,255,255,.06));
+    --zen-toolbar-element-bg-hover: light-dark(rgba(0,0,0,.08), rgba(255,255,255,.1));
+    --toolbox-textcolor: light-dark(#1d1b22, #ece9f2);
+    --zen-big-shadow: 0 3px 8px rgba(0,0,0,.2);
+    background: light-dark(#e9e4f7, #1b1922);
+    font-family: -apple-system, system-ui, sans-serif;
+  }
+  body { margin: 0; }
+  #sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; padding: 14px 10px; box-sizing: border-box; color: light-dark(#2a2731, #ddd9e6); font-size: 13px; }
+  #sidebar div { padding: 8px 10px; border-radius: 8px; margin-bottom: 4px; }
+  #sidebar div.sel { background: light-dark(rgba(255,255,255,.7), rgba(255,255,255,.08)); }
+  #tabbrowser-tabbox { position: fixed; left: 228px; top: 8px; right: 8px; bottom: 8px; margin-inline-end: 0; border-radius: 11px; overflow: hidden; background: light-dark(#fff, #0f1115); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .page { height: 100%; overflow: hidden; color: light-dark(#1f2328, #e6edf3); }
+  .page header { height: 56px; background: light-dark(#f6f8fa, #161b22); display: flex; align-items: center; padding: 0 24px; font-weight: 600; border-bottom: 1px solid light-dark(#d0d7de, #30363d); }
+  .page main { padding: 28px 40px; display: grid; grid-template-columns: 1fr 300px; gap: 32px; }
+  .page h1 { font-size: 30px; margin: 0 0 12px; }
+  .page p { line-height: 1.6; color: light-dark(#59636e, #9198a1); }
+  .hero { height: 260px; border-radius: 12px; background: linear-gradient(135deg, #ff7a59, #ffcf5c 40%, #4ade80 70%, #38bdf8); margin: 18px 0; }
+  .card { border: 1px solid light-dark(#d0d7de, #30363d); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+</style></head>
+<body>
+<nav id="sidebar"><div>📌 Pinned</div><div class="sel">zen-browser/desktop</div><div>Merge sort - Wikipedia</div><div>anthropics/claude-code</div><div>Weekly planner</div></nav>
+<div id="tabbrowser-tabbox"><div class="page">
+  <header>⬢ github.com / zen-browser / desktop</header>
+  <main><div><h1>Welcome to a calmer internet</h1>
+  <p>Zen is a privacy-focused browser that blocks trackers, ads, and other unwanted content while offering the best browsing experience.</p>
+  <div class="hero"></div>
+  <p>Workspaces, split views, compact mode, glance and more. Sorting algorithms: merge sort runs in O(n log n) time and is stable.</p></div>
+  <aside><div class="card"><b>About</b><p>Welcome to a calmer internet. Firefox-based.</p></div><div class="card"><b>Releases 212</b><p>1.18.4b · Latest</p></div></aside></main>
+</div></div>
+<script>
+const MOD = __MOD__;
+const FILES = __FILES__;
+const b64bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const prefStore = new Map([["zenai.blur", location.hash.includes("snapshot") ? "snapshot" : "native"]]);
+prefStore.set("zenai.models.antigravity", JSON.stringify([{value:"default",displayName:"Default"},{value:"gemini-3.8-flash",displayName:"Gemini 3.8 Flash"},{value:"claude-sonnet-5-5",displayName:"Claude Sonnet 5.5"}]));
+window.__copied = 0;
+let push = null;
+const REPLY = "Here's the comparison:\n\n- **Merge sort** is stable and always O(n log n).\n- **Quick sort** is usually faster in practice.\n\n```python\ndef merge_sort(a):\n    if len(a) <= 1:\n        return a\n    mid = len(a) // 2\n    return merge(merge_sort(a[:mid]), merge_sort(a[mid:]))\n```\n\nThe PDF's secret word is **PERIWINKLE**.";
+// A /grocery run ends with Lessons; the updater (a one-off run) answers with edits
+const LESSONS = "Done: 12 of 12 items added and saved.\n\n## Lessons for /grocery (weekly order run)\n- Typing 1/2 in a quantity box rounds it to 1. Type 0.5 directly with browser_type. Belongs in Adding items.\n- The Add to cart refs shift by one after each add. Re-read the list every time. Belongs in Loop step 5.";
+const UPDATER = "```json\n" + JSON.stringify({
+  edits: [
+    { section: "Adding items", find: "- Click the box, then type with `browser_type`.", replace: "- Click the box, then type with `browser_type`.\n- For half quantities, type 0.5 directly. A typed 1/2 rounds to 1." },
+    { section: "Scope and safety", find: "- Never click **Submit Order**.", replace: "- Never click **Submit Order**. Save for later per item is fine." },
+  ],
+  changed: ["Adding items: type 0.5 for half quantities", "Scope and safety: Save for later per item is allowed"],
+  already_covered: ["Loop step 5 already says to re-read refs after each add"],
+  unclear: [],
+}) + "\n```";
+// Helper agents' processes (agents: N skills): each answers by its task's title
+const childProcs = [];
+const CHILD_SCRIPTS = {
+  "Counterexamples": { text: "Found three cases to address:\n\n1. **Small arrays**: insertion sort beats both below ~16 items.\n2. **Already sorted input**: naive quick sort degrades to O(n²).\n3. **Linked lists**: merge sort needs no random access.", done: true },
+  "Source review": { text: "Reading the two supplied articles…\nComparing their benchmark setups", done: false },
+};
+const Subprocess = { async call(opts) {
+  if (opts.arguments.length === 1 && opts.arguments[0] === "--version") {
+    let given = false;
+    return { stdin: { async write() {} }, stdout: { async readString() { if (given) return ""; given = true; return "2.1.296 (Claude Code)\n"; } }, stderr: { readString: async () => "" }, wait: async () => ({ exitCode: 0 }), kill: async () => {} };
+  }
+  const isChild = opts.arguments.includes("--no-session-persistence") && opts.arguments.includes("--mcp-config");
+  if (isChild) {
+    const cq = []; let cwait = null;
+    const cpush = (o) => { cq.push(JSON.stringify(o) + "\n"); if (cwait) { cwait(); cwait = null; } };
+    const proc = { push: cpush, title: "" };
+    childProcs.push(proc);
+    return {
+      stdin: { async write(line) {
+        const m = JSON.parse(line);
+        if (m.type !== "user") return;
+        const said = ((m.message && m.message.content) || []).map((b) => b.text || "").join("");
+        proc.title = (said.match(/<agent_task title="([^"]*)"/) || [])[1] || "";
+        const script = CHILD_SCRIPTS[proc.title];
+        if (!script) return; // waits (an agent about to ask for a card)
+        const chunks = script.text.match(/[\s\S]{1,18}/g); let i = 0;
+        const t = setInterval(() => { if (i < chunks.length) cpush({ type: "stream_event", session_id: "c", event: { type: "content_block_delta", delta: { type: "text_delta", text: chunks[i++] } } });
+          else { clearInterval(t); if (script.done) cpush({ type: "result", subtype: "success", result: script.text, session_id: "c" }); } }, 20);
+      } },
+      stdout: { async readString() { while (!cq.length) await new Promise((r) => (cwait = r)); return cq.splice(0).join(""); } },
+      stderr: { readString: () => new Promise(() => {}) }, wait: () => new Promise(() => {}), kill: async () => {},
+    };
+  }
+  if (opts.arguments.includes("--no-session-persistence")) {
+    let out = []; let wake = null;
+    return {
+      stdin: { async write() { setTimeout(() => { out.push(JSON.stringify({ type: "result", subtype: "success", result: UPDATER }) + "\n"); if (wake) wake(); }, 300); } },
+      stdout: { async readString() { while (!out.length) await new Promise((r) => (wake = r)); return out.splice(0).join(""); } },
+      stderr: { readString: () => new Promise(() => {}) }, wait: () => new Promise(() => {}), kill: async () => {},
+    };
+  }
+  const q = []; let waiter = null;
+  push = (o) => { q.push(JSON.stringify(o) + "\n"); if (waiter) { waiter(); waiter = null; } };
+  return {
+    stdin: { async write(line) { const m = JSON.parse(line); window.__sent = (window.__sent || []).concat([m]); if (m.type === "control_request" && m.request.subtype === "initialize") { setTimeout(() => push({ type: "control_response", response: { subtype: "success", request_id: m.request_id, response: { models: [{"value": "default", "displayName": "Default (recommended)", "description": "Sonnet 5.5 \u00b7 Efficient for routine tasks"}, {"value": "sonnet", "displayName": "Sonnet", "description": "Sonnet 5.5 \u00b7 Efficient for routine tasks"}, {"value": "fable", "displayName": "Fable", "description": "Fable 5.1 \u00b7 Most capable for your hardest and longest-running tasks \u00b7 Requires usage credits"}, {"value": "opus", "displayName": "Opus", "description": "Opus 5.5 \u00b7 Best for everyday, complex tasks"}, {"value": "haiku", "displayName": "Haiku", "description": "Haiku 5.5 \u00b7 Fastest for quick answers"}] } } }), 30); } if (m.type === "user") {
+      if (/Book me a table|number of peaks|<skill name=\\"compare/.test(JSON.stringify(m))) return; // a task in progress (see __askPermission)
+      // Later replies stream slower, so the history shot can catch one running
+      window.__replies = (window.__replies || 0) + 1; const every = window.__replies > 1 ? 70 : 15;
+      const said = ((m.message && m.message.content) || []).map((b) => b.text || "").join("");
+      let i = 0; const chunks = (said.includes('<skill name="grocery"') ? LESSONS : REPLY).match(/[\s\S]{1,24}/g);
+      const t = setInterval(() => { if (i < chunks.length) push({ type: "stream_event", session_id: "5e55a0b1-0000-4000-8000-0000000000ff", event: { type: "content_block_delta", delta: { type: "text_delta", text: chunks[i++] } } });
+        else { clearInterval(t); const sec = (ms) => Math.floor((Date.now() + ms) / 1000); push({ type: "rate_limit_event", rate_limit_info: { status: "allowed_warning", rateLimitType: "seven_day", utilization: 0.81, unifiedWindows: { five_hour: { utilization: 0.51, resetsAt: sec(7200000) }, seven_day: { utilization: 0.81, resetsAt: sec(259200000) } } } }); push({ type: "result", subtype: "success", result: REPLY, session_id: "5e55a0b1-0000-4000-8000-0000000000ff", num_turns: 1, usage: { input_tokens: 4, cache_read_input_tokens: 61000, cache_creation_input_tokens: 900, output_tokens: 300, iterations: [{ input_tokens: 4, cache_read_input_tokens: 61000, cache_creation_input_tokens: 900, output_tokens: 300 }] } }); } }, every);
+    } } },
+    stdout: { async readString() { while (!q.length) await new Promise((r) => (waiter = r)); return q.splice(0).join(""); } },
+    stderr: { readString: () => new Promise(() => {}) },
+    wait: () => new Promise(() => {}), kill: async () => {},
+  };
+} };
+// Claude Code asking to use a tool (the approval card shots)
+window.__askPermission = (tool_name, input) => push({ type: "control_request", request_id: "p" + Math.random(), request: { subtype: "can_use_tool", tool_name, input } });
+// The parent saying something (agent scenes), and an agent asking for a card
+window.__parentSay = (text) => push({ type: "stream_event", session_id: "5e55a0b1-0000-4000-8000-0000000000ff", event: { type: "content_block_delta", delta: { type: "text_delta", text } } });
+window.__childAsk = (title, tool_name, input) => { const c = childProcs.find((p) => p.title === title); if (c) c.push({ type: "control_request", request_id: "cp" + Math.random(), request: { subtype: "can_use_tool", tool_name, input } }); };
+// ...and calling one of the mod's tools (after it was allowed)
+window.__callTool = (name, args) => push({ type: "control_request", request_id: "m" + Math.random(), request: { subtype: "mcp_message", server_name: "zenai", message: { jsonrpc: "2.0", id: 7, method: "tools/call", params: { name, arguments: args } } } });
+window.ChromeUtils = { importESModule: (u) => u.includes("Subprocess") ? { Subprocess } : { BrowserUtils: { copyImageToClipboard: () => window.__copied++ } } };
+window.Services = { prefs: { getStringPref: (n, f) => prefStore.has(n) ? prefStore.get(n) : f, setStringPref: (n, v) => prefStore.set(n, v), addObserver() {}, removeObserver() {} },
+  dirsvc: { get: () => ({ path: "/Users/alex" }) }, scriptSecurityManager: { createNullPrincipal: () => ({}) } };
+window.__picked = [];
+window.Ci = { nsIFile: function () {}, nsIFilePicker: { modeOpenMultiple: 3, returnOK: 0 }, nsIClipboardHelper: {} };
+window.Cc = { "@mozilla.org/filepicker;1": { createInstance: () => ({ init() {}, open(cb) { const l = window.__picked.slice(); this.files = { hasMoreElements: () => l.length > 0, getNext: () => ({ QueryInterface: () => l.shift() }) }; setTimeout(() => cb(0)); } }) },
+  "@mozilla.org/widget/clipboardhelper;1": { getService: () => ({ copyString() {} }) } };
+// Chat history: a few saved chats in the "School" Space (see shoot.mjs)
+const HIST = "/profile/zen-ai/chats";
+const chatDisk = new Map();
+const H = 60 * 60 * 1000;
+const day = (n, hour) => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(hour, 12, 0, 0); return d.getTime(); };
+const seed = [
+  { id: "seed-merge", title: "Merge sort vs quick sort", updated: Date.now() - 2 * H, tainted: true },
+  { id: "seed-wiki", title: "Summarize · en.wikipedia.org", updated: Date.now() - 3 * H, tainted: true },
+  { id: "seed-lab3", title: "Lab 3 report outline", updated: day(1, 16) },
+  { id: "seed-css", title: "Why is my CSS grid collapsing on mobile?", updated: day(1, 10), expired: true },
+  { id: "seed-reply", title: "Reply: say I can make the 3pm meeting", updated: day(4, 9) },
+  { id: "seed-bigo", title: "Explain: Big-O notation", updated: day(9, 20) },
+].map((c, i) => ({ sessionId: `5e55a0b1-0000-4000-8000-00000000000${i}`, spaceId: "space-school", created: c.updated - H / 2, model: "default", tainted: false, toolsUnlocked: false, expired: false, ...c }));
+chatDisk.set(HIST + "/index.json", JSON.stringify({ version: 1, chats: seed }));
+for (const c of seed) chatDisk.set(`${HIST}/${c.id}.json`, JSON.stringify({ version: 1, ...c, messages: [
+  { role: "user", ts: c.updated - 60000, text: c.id === "seed-css" ? "Why does my grid collapse to one column on phones?" : c.title, chips: [{ label: "github.com", icon: "doc" }], media: [] },
+  { role: "assistant", ts: c.updated, blocks: [{ type: "text", text: c.id === "seed-css" ? "Your `grid-template-columns` uses `minmax(320px, 1fr)`, which is wider than most phones.\n\n- Use `minmax(min(320px, 100%), 1fr)` so a column can shrink.\n- Or switch to one column under 400px with a media query." : "Here's what I found." }] },
+] }));
+const inHist = (p) => p.startsWith("/profile/zen-ai");
+// The skills folder: a few loose skills and folders (the "/" menu shot)
+const SK = "/profile/chrome/zenai-skills";
+const sk = (name, desc) => `---\nname: ${name}\ndescription: ${desc}\n---\nDo ${name}.`;
+const skillDisk = new Map(Object.entries({
+  "summarize.md": sk("summarize", "Summarize this page"), "tldr.md": sk("tldr", "The page in one line"), "explain.md": sk("explain", "Explain the selection simply"),
+  "School/solve.md": sk("solve", "Work through the math on this page step by step"), "School/flashcards.md": sk("flashcards", "Turn this page into flashcards"),
+  "School/Chem/balance.md": sk("balance", "Balance a chemical equation"),
+  "Work/reply.md": sk("reply", "Draft a reply to this message"), "Work/summarize.md": sk("summarize", "Summarize for my team"),
+  "compare.md": "---\nname: compare\ndescription: Compare sources with two helper agents\nagents: 2\n---\nCompare the sources with helper agents.",
+  "Home/Errands/grocery.md": "---\nname: grocery\ndescription: Fill the grocery cart from my shopping list\nlessons: true\n---\n# Grocery cart runner\n\n## Scope and safety\n- Work only in the open tab.\n- Never click **Submit Order**.\n\n## Loop\n1. Read the list.\n2. Add the item.\n\n## Adding items\n- Click the box, then type with `browser_type`.\n- Close the item popup after each add.\n",
+}).map(([k, v]) => [`${SK}/${k}`, v]));
+const inSkills = (p) => p === SK || p.startsWith(SK + "/");
+const childrenOf = (d) => [...new Set([...skillDisk.keys()].filter((k) => k.startsWith(d + "/")).map((k) => d + "/" + k.slice(d.length + 1).split("/")[0]))];
+window.IOUtils = { makeDirectory: async () => {}, exists: async (p) => (inHist(p) ? chatDisk.has(p) : inSkills(p) ? p === SK || skillDisk.has(p) || childrenOf(p).length > 0 : true), write: async () => {},
+  writeUTF8: async (p, t) => { if (inHist(p)) chatDisk.set(p, t); else if (inSkills(p)) skillDisk.set(p, t); }, move: async (a, b) => { chatDisk.set(b, chatDisk.get(a)); chatDisk.delete(a); }, remove: async (p) => { chatDisk.delete(p); },
+  getChildren: async (d) => (inHist(d) ? [...chatDisk.keys()].filter((k) => k.startsWith(d + "/")) : inSkills(d) ? childrenOf(d) : []),
+  stat: async (p) => ({ type: childrenOf(p).length ? "directory" : "regular" }),
+  readUTF8: async (p) => { if (inHist(p)) { if (!chatDisk.has(p)) throw new Error("not found"); return chatDisk.get(p); } return skillDisk.get(p) || ""; }, read: async (p) => b64bytes(FILES[p]) };
+// Zen's Spaces (docs/zen-spaces.md)
+window.gZenWorkspaces = { activeWorkspace: "space-school", getWorkspaceFromId: (id) => ({ uuid: id, name: "School" }), getWorkspaces: () => [{ uuid: "space-school", name: "School" }], addChangeListeners() {}, removeChangeListeners() {} };
+window.PathUtils = { join: (...a) => a.join("/"), filename: (p) => p.split("/").pop(), profileDir: "/profile" };
+window.windowUtils = { AUTHOR_SHEET: 2, loadSheetUsingURIString(uri) { const s = document.createElement("style"); s.textContent = decodeURIComponent(uri.slice(uri.indexOf(",") + 1)); document.head.append(s); } };
+document.createXULElement = (t) => { const el = document.createElement("div"); el.openPopupAtScreen = () => { window.__menuOpened = true; }; return el; };
+const popupset = document.createElement("div"); popupset.id = "mainPopupSet"; popupset.style.display = "none"; document.body.append(popupset);
+window.openLinkIn = () => {};
+window.UC_API = { Hotkeys: { define: () => ({ attachToWindow() {} }) } };
+window.browsingContext = {};
+const tabbox = document.getElementById("tabbrowser-tabbox");
+async function snapshotBitmap(scale) {
+  const r = tabbox.getBoundingClientRect();
+  const c = document.createElement("canvas"); c.width = Math.round(r.width * scale); c.height = Math.round(r.height * scale);
+  const x = c.getContext("2d"); x.scale(scale, scale);
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  x.fillStyle = dark ? "#0f1115" : "#fff"; x.fillRect(0, 0, r.width, r.height);
+  x.fillStyle = dark ? "#161b22" : "#f6f8fa"; x.fillRect(0, 0, r.width, 56);
+  const g = x.createLinearGradient(40, 160, 700, 420); g.addColorStop(0, "#ff7a59"); g.addColorStop(.4, "#ffcf5c"); g.addColorStop(.7, "#4ade80"); g.addColorStop(1, "#38bdf8");
+  x.fillStyle = g; x.fillRect(40, 170, r.width - 420, 260);
+  x.fillStyle = dark ? "#e6edf3" : "#1f2328"; x.font = "bold 30px -apple-system, sans-serif"; x.fillText("Welcome to a calmer internet", 40, 130);
+  // A slider drawn in SVG (the same as in the web page below): ticks 0–5, the dot at 3
+  x.font = "15px -apple-system, sans-serif"; x.fillText("Number of peaks", 40, 488);
+  x.strokeStyle = dark ? "#59636e" : "#9198a1"; x.lineWidth = 4; x.beginPath(); x.moveTo(80, 520); x.lineTo(480, 520); x.stroke();
+  x.lineWidth = 2; x.font = "12px -apple-system, sans-serif";
+  for (let i = 0; i <= 5; i++) { x.beginPath(); x.moveTo(80 + i * 80, 512); x.lineTo(80 + i * 80, 528); x.stroke(); x.fillText(String(i), 76 + i * 80, 548); }
+  x.fillStyle = dark ? "#e6edf3" : "#000"; x.beginPath(); x.arc(320, 520, 9, 0, 7); x.fill();
+  return createImageBitmap(c);
+}
+// The web page behind the first tab, for the page agent: an off-screen frame
+// with the same slider, and Firefox's message manager running frame scripts in it
+const webFrame = document.createElement("iframe");
+webFrame.style.cssText = `position: fixed; left: -6000px; top: 0; border: 0; width: ${tabbox.getBoundingClientRect().width}px; height: ${tabbox.getBoundingClientRect().height}px`;
+webFrame.srcdoc = '<body style="margin:0"><svg width="600" height="600" style="position:absolute;left:0;top:0"><line x1="80" y1="520" x2="480" y2="520" stroke="#999" stroke-width="4"/><circle id="dot" cx="320" cy="520" r="9"/></svg></body>';
+document.body.append(webFrame);
+function messageManager() {
+  const listeners = new Map();
+  const call = (name, data) => [...(listeners.get(name) || [])].map((fn) => fn({ name, data }));
+  return {
+    addMessageListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
+    removeMessageListener(n, fn) { const set = listeners.get(n); if (set) set.delete(fn); },
+    loadFrameScript(url) {
+      const code = decodeURIComponent(url.slice(url.indexOf(",") + 1));
+      new Function("sendSyncMessage", "sendAsyncMessage", "content", "Components", code)((n, d) => call(n, d), (n, d) => setTimeout(() => call(n, JSON.parse(JSON.stringify(d === undefined ? null : d)))), webFrame.contentWindow, undefined);
+    },
+  };
+}
+function makeBrowser(url, title) {
+  return { currentURI: { spec: url, host: new URL(url).host }, contentTitle: title, messageManager: null,
+    getBoundingClientRect: () => tabbox.getBoundingClientRect(), focus() {},
+    browsingContext: { currentWindowGlobal: { getActor: () => ({ getText: async () => ({ text: "Text of " + title }) }), drawSnapshot: (r, s) => snapshotBitmap(s) } } };
+}
+const fav = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#24292f"/><circle cx="8" cy="7" r="3.2" fill="#fff"/></svg>');
+const wfav = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="3" fill="#eee"/><text x="8" y="12.5" font-size="11" text-anchor="middle" font-family="serif">W</text></svg>');
+const mk = (url, title, icon) => ({ label: title, linkedBrowser: makeBrowser(url, title), getAttribute: (n) => n === "image" ? icon : null, hasAttribute: () => false });
+const tabs = [mk("https://github.com/zen-browser/desktop", "zen-browser/desktop: Welcome to a calmer internet", fav),
+  mk("https://en.wikipedia.org/wiki/Merge_sort", "Merge sort - Wikipedia", wfav),
+  mk("https://github.com/anthropics/claude-code", "anthropics/claude-code: Claude Code is an agentic coding tool", fav)];
+tabs[0].linkedBrowser.messageManager = messageManager();
+tabs[0].linkedBrowser.webProgress = { isLoadingDocument: false };
+window.gBrowser = { selectedTab: tabs[0], get selectedBrowser() { return this.selectedTab.linkedBrowser; }, visibleTabs: tabs, tabContainer: new EventTarget() };
+window.delayedStartupPromise = Promise.resolve();
+window.__errors = [];
+window.addEventListener("error", (e) => window.__errors.push(String(e.message)));
+const ce = console.error; console.error = (...a) => { window.__errors.push(a.join(" ")); ce(...a); };
+(0, eval)(MOD);
+</script></body></html>

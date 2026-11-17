@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Module 2: Protective equipment</title>
+<style>
+  body { font: 16px system-ui, sans-serif; margin: 16px; background: #f7f7fb; }
+  .step[hidden] { display: none; }
+  fieldset { margin: 0 0 12px; }
+  #glossary { width: 260px; height: 44px; border: 1px solid #aac; display: block; margin-top: 16px; }
+  video { width: 320px; height: 60px; background: #000; display: block; }
+</style>
+</head>
+<body>
+<!-- The lesson player, embedded from another site. ?video=N: the video's seconds -->
+<h2 id="where">Question 1 of 1</h2>
+
+<section class="step" id="step1">
+  <fieldset>
+    <legend>Which of these should you wear when handling chemicals?</legend>
+    <label><input type="radio" name="ppe" value="goggles"> Goggles</label>
+    <label><input type="radio" name="ppe" value="sandals"> Sandals</label>
+    <label><input type="radio" name="ppe" value="headphones"> Headphones</label>
+  </fieldset>
+  <label>Notes <input id="notes" name="notes"></label>
+  <label>Unlock code <input id="code" type="password" name="code"></label>
+  <p><button id="next1" type="button">Next</button></p>
+</section>
+
+<section class="step" id="step2" hidden>
+  <h3>Lesson video</h3>
+  <video id="lesson" muted playsinline></video>
+  <p id="status">Watch the whole video to continue.</p>
+  <button id="continue" type="button" disabled>Continue</button>
+</section>
+
+<section class="step" id="step3" hidden>
+  <form id="survey" onsubmit="event.preventDefault(); document.getElementById('where').textContent = 'Module complete'; log.push('submitted')">
+    <fieldset>
+      <legend>How often do you work in a lab?</legend>
+      <label><input type="radio" name="often" value="daily"> Daily</label>
+      <label><input type="radio" name="often" value="weekly"> Weekly</label>
+      <label><input type="radio" name="often" value="never"> Never</label>
+    </fieldset>
+    <label>Anything else you'd like to tell us? <textarea id="more" name="more"></textarea></label>
+    <p><button id="submit" type="submit">Submit survey</button></p>
+  </form>
+</section>
+
+<iframe id="glossary" title="Glossary" src="__OTHER__/frames-glossary.html"></iframe>
+
+<script>
+  window.log = [];
+  for (const t of ["mousedown", "click", "keydown", "input"]) document.addEventListener(t, (e) => log.push(`${t}:${e.target.id || e.target.name || e.target.tagName}:${e.isTrusted}`), true);
+  const show = (n) => { for (const s of document.querySelectorAll(".step")) s.hidden = s.id !== "step" + n; };
+  show(1);
+
+  // A real (silent) video of a few seconds: a WAV the <video> plays
+  function silentWav(secs) {
+    const rate = 8000, n = Math.round(secs * rate);
+    const buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf);
+    const w = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+    w(0, "RIFF"); dv.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  const seconds = Number(new URLSearchParams(location.search).get("video")) || 4;
+  document.getElementById("next1").onclick = () => {
+    log.push("next1:" + ((document.querySelector("input[name=ppe]:checked") || {}).value || "none"));
+    show(2);
+    document.getElementById("where").textContent = "Lesson video";
+    const v = document.getElementById("lesson");
+    v.src = silentWav(seconds);
+    v.play().catch((e) => log.push("play failed: " + e));
+  };
+  document.getElementById("lesson").addEventListener("ended", () => {
+    document.getElementById("status").textContent = "Video complete.";
+    document.getElementById("continue").disabled = false;
+  });
+  document.getElementById("continue").onclick = () => {
+    show(3);
+    document.getElementById("where").textContent = "Quick survey";
+  };
+</script>
+</body>
+</html>

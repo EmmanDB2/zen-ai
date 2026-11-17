@@ -1,0 +1,95 @@
+Zen AI: a chat window for Zen Browser that can read the page you're on
+==================================================================
+
+Press Cmd+E in Zen to chat about the current page, attach files and tabs,
+save files, and fill in forms or click through pages. It asks you before
+each action unless you choose "Allow all actions in this chat".
+
+
+WHAT YOU NEED
+
+- A Mac with Zen Browser (https://zen-browser.app). Open it at least once.
+- A Claude account with Pro or Max. Zen AI runs through Claude Code, the
+  Claude app for the Terminal. It uses your plan's usage; there's no API key
+  and nothing else to pay. The installer can install Claude Code and sign
+  you in.
+
+
+INSTALL
+
+1. Double-click "Install Zen AI.command" and answer its questions.
+
+   If macOS says it "can't be opened": open System Settings > Privacy &
+   Security, scroll down, click "Open Anyway" next to the installer, and
+   double-click it again.
+   Or open Terminal, type   bash   and a space, drag the installer onto the
+   Terminal window, and press Return.
+
+2. The first time, the installer will probably say macOS didn't let it add
+   the loader to Zen, and it will open System Settings > Privacy & Security
+   > App Management. Turn on Terminal there, then run the installer again.
+   (Zen AI needs a small loader, fx-autoconfig, inside the Zen app itself.)
+
+3. Open Zen and press Cmd+E.
+
+
+WHAT IT CAN DO
+
+- Chat about the page you're on. Attach files, other tabs or a screenshot.
+- Act on pages: fill forms, click, drag, wait for a video. Each action
+  shows a card first, unless you allow all. Claude never types a
+  password or card number itself (see Saved logins).
+- Edit files you attach (Word, PowerPoint, Excel, notebooks, text): it
+  saves a changed copy and keeps the formatting; your file isn't touched.
+- Watch a page: "tell me when this is back in stock" or "when an email
+  from X comes in". Zen checks it by itself (no AI usage while it waits),
+  tells you, and can have Claude act once it happens. The eye button at
+  the top lists watches. Zen has to be open.
+- Make files: PDFs, Word documents, Excel spreadsheets, Colab notebooks,
+  code. They're saved in ~/Documents/Claude Output and show as cards at
+  the end of the reply: click to open, or drag one onto an upload box.
+- Organize your tabs: "put my class tabs in a folder", "close the
+  shopping tabs". Pinned tabs are only unloaded unless you say yes.
+- Skills: type / to pick one. They're Markdown files in your skills
+  folder (Zen's Settings > Zen AI > Open skills folder). Write your own,
+  or type /create-skill and say what it should do: Claude drafts it and
+  you check its settings before it's saved (send it empty to write one
+  yourself).
+  Put facts about yourself in _about-me.md for skills that list it.
+- Helper agents: a skill with "agents: 2" in its header (like the
+  /compare-sources example) can hand parts of its work to helper agents.
+  They show as small boxes in the reply, with Stop. Each one is another
+  session of the same AI, so it counts against your usage limit. You can
+  turn them off in Settings > Zen AI.
+- Saved logins: write them yourself in _secrets.md in the skills folder,
+  one per line, like
+      - Email password (mail.example.com): your-password
+  A skill that lists "secrets" can fill them in. Claude only sees the
+  label, never the password.
+- The ring around the Send button is how much of your Claude usage
+  you've used. Hover over it for a second to see when it resets.
+
+
+AFTER A ZEN UPDATE
+
+Zen's updates remove the loader. If Cmd+E stops doing anything, run the
+installer again. It takes a few seconds.
+
+
+TO REMOVE IT
+
+In Terminal:   bash   then a space, drag the installer in, type   --remove
+and press Return.
+
+
+WHERE THINGS GO
+
+- Files Zen AI saves: ~/Documents/Claude Output
+- Your chats: in your Zen profile, in the zen-ai folder. Private windows
+  save nothing.
+- Settings: Zen's Settings > Zen AI (where Claude Code is, the look, how
+  long a chat is reopened for, your skills folder, skill updates).
+
+
+fx-autoconfig is by MrOtherGuy (https://github.com/MrOtherGuy/fx-autoconfig),
+included under the Mozilla Public License 2.0 (files/fx-autoconfig/LICENSE).

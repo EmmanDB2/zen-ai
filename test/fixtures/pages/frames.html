@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lab Safety 101 · Module 2</title>
+<style>
+  body { font: 16px system-ui, sans-serif; margin: 20px; color: #222; }
+  #player { width: 900px; height: 600px; border: 1px solid #999; display: block; }
+  #ad { width: 300px; height: 90px; border: 0; }
+</style>
+</head>
+<body>
+<!-- A course site whose lessons play in a frame from another site (like a SCORM player) -->
+<h1>Lab Safety 101</h1>
+<p>Module 2 of 5 · <button id="help" onclick="this.textContent = 'Help is on the way'">Help</button></p>
+<iframe id="player" title="Course player"></iframe>
+<p>Sponsored:</p>
+<iframe id="ad" title="Sponsored" src="__OTHER__/frames-ad.html"></iframe>
+<iframe id="tracker" src="__OTHER__/frames-ad.html" style="display: none"></iframe>
+<div style="height: 900px"></div>
+<script>
+  // (?video=N passes on to the player: how long its video is)
+  document.getElementById("player").src = "__OTHER__/frames-course.html" + location.search;
+  window.log = [];
+  for (const t of ["mousedown", "click"]) document.addEventListener(t, (e) => log.push(`${t}:${e.target.id || e.target.tagName}:${e.isTrusted}`), true);
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Math editor</title>
+<link rel="stylesheet" href="../../../node_modules/mathquill/build/mathquill.css">
+<style>body{font:16px system-ui;padding:30px} .answer{min-width:220px;padding:6px;border:1px solid #888;display:inline-block}</style></head>
+<body><h1>Practice: algebra</h1><p>Simplify: (6x^4)/(8x^2)</p>
+<label>Answer <span id="ans" class="answer"></span></label>
+<p>Second: write sqrt of 2 over 3</p><span id="ans2" class="answer" aria-label="Second answer"></span>
+<button type="button" id="check">Check answer</button>
+<script src="../../../node_modules/jquery/dist/jquery.min.js"></script>
+<script src="../../../node_modules/mathquill/build/mathquill.min.js"></script>
+<script>
+  window.log = { edits: 0, latex: "", latex2: "" };
+  const MQ = MathQuill.getInterface(2);
+  const f1 = MQ.MathField(document.getElementById("ans"), { handlers: { edit: (m) => { log.edits++; log.latex = m.latex(); } } });
+  const f2 = MQ.MathField(document.getElementById("ans2"), { handlers: { edit: (m) => { log.latex2 = m.latex(); } } });
+  window.readAnswers = () => [f1.latex(), f2.latex()];
+</script>
+
+</body></html>
